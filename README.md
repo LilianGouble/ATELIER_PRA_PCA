@@ -231,27 +231,40 @@ Faites preuve de pédagogie et soyez clair dans vos explications et procedures d
 **Exercice 1 :**  
 Quels sont les composants dont la perte entraîne une perte de données ?  
   
-*..Répondez à cet exercice ici..*
+- Le PVC pra-data : Sa destruction entraîne la perte de la base de données SQLite en production (ce que l'on a simulé dans le scénario 2).
+
+- Le Disque physique du Node (SPOF) : Comme l'architecture cible le montre, les deux volumes (PVC pra-data et PVC pra-backup) reposent sur le même disque dur du nœud Kubernetes. Si ce disque crashe, nous perdons à la fois nos données de production et nos sauvegardes, ce qui est fatal.
 
 **Exercice 2 :**  
 Expliquez nous pourquoi nous n'avons pas perdu les données lors de la supression du PVC pra-data  
   
-*..Répondez à cet exercice ici..*
+Lors de la suppression du PVC pra-data, nous avons bien perdu les données en production (le compteur affichait 0). Cependant, nous n'avons pas perdu nos données de manière définitive grâce à notre stratégie de PRA.
+Un CronJob (sqlite-backup) est configuré pour copier la base de données toutes les minutes vers un volume de sauvegarde indépendant (PVC pra-backup). L'isolation logique entre ces deux volumes a permis d'exécuter un Job de restauration (50-job-restore.yaml) pour réinjecter le dernier fichier .db sauvegardé vers un nouveau PVC pra-data.
 
 **Exercice 3 :**  
 Quels sont les RTO et RPO de cette solution ?  
   
-*..Répondez à cet exercice ici..*
+- RPO (Recovery Point Objective - Perte de données maximale admissible) : ~1 minute. Le CronJob de sauvegarde s'exécutant chaque minute (schedule: "*/1 * * * *"), la perte de données maximale en cas de crash juste avant une sauvegarde sera d'une minute d'historique.
+
+- RTO (Recovery Time Objective - Temps de reprise) : Quelques minutes (ex: 3 à 5 minutes). Il n'est pas nul car la restauration n'est pas automatisée. Le RTO dépend du temps que met l'administrateur à détecter la panne, couper le trafic, recréer le PVC, et lancer le script de restauration manuellement.
 
 **Exercice 4 :**  
 Pourquoi cette solution (cet atelier) ne peux pas être utilisé dans un vrai environnement de production ? Que manque-t-il ?   
   
-*..Répondez à cet exercice ici..*
-  
+1. Single Point of Failure (SPOF) sur le stockage : Les données de production et les sauvegardes résident sur le même nœud physique/disque (Disque du node). Une panne matérielle supprime tout.
+
+2. Base de données inadaptée : SQLite utilise des verrous au niveau du fichier et n'est pas fait pour être accédé simultanément par plusieurs pods Kubernetes de manière performante.
+
+3. Non-respect de la règle du 3-2-1 : Les sauvegardes ne sont pas externalisées (pas de copie sur un site distant ni sur un support de stockage différent).
+
 **Exercice 5 :**  
 Proposez une archtecture plus robuste.   
   
-*..Répondez à cet exercice ici..*
+1. Externaliser la base de données : Remplacer SQLite par un service de base de données managé avec haute disponibilité (ex: PostgreSQL sur AWS RDS Multi-AZ) ou déployer un cluster BDD répliqué sur Kubernetes (via un Operator).
+
+2. Externaliser les sauvegardes : Envoyer les backups dans un stockage objet externe, géographiquement distant (comme Amazon S3, Azure Blob ou un bucket MinIO), en utilisant des outils de PRA modernes comme Velero.
+
+3. Cluster Kubernetes Multi-Zones : Répartir les nœuds "workers" du cluster sur plusieurs zones de disponibilité matérielles et utiliser des volumes persistants distribués et répliqués (ex: AWS EBS CSI, Ceph, Portworx).
 
 ---------------------------------------------------
 Séquence 6 : Ateliers  

@@ -2,6 +2,7 @@ import os
 import sqlite3
 from datetime import datetime
 from flask import Flask, jsonify, request
+import time
 
 DB_PATH = os.getenv("DB_PATH", "/data/app.db")
 
@@ -87,6 +88,37 @@ def count():
     conn.close()
 
     return jsonify(count=n)
+
+@app.get("/status")
+def status():
+    init_db()
+
+    # 1. Récupérer le nombre d'événements
+    conn = get_conn()
+    cur = conn.execute("SELECT COUNT(*) FROM events")
+    n = cur.fetchone()[0]
+    conn.close()
+
+    # 2. Inspecter le dossier des backups
+    backup_dir = "/backup"
+    last_backup_file = "Aucun"
+    backup_age_seconds = 0
+
+    if os.path.exists(backup_dir):
+        files = [f for f in os.listdir(backup_dir) if f.endswith('.db')]
+        if files:
+            # Trouver le fichier le plus récent
+            full_paths = [os.path.join(backup_dir, f) for f in files]
+            latest_file = max(full_paths, key=os.path.getmtime)
+            last_backup_file = os.path.basename(latest_file)
+            # Calculer l'âge en secondes
+            backup_age_seconds = int(time.time() - os.path.getmtime(latest_file))
+
+    return jsonify(
+        count=n,
+        last_backup_file=last_backup_file,
+        backup_age_seconds=backup_age_seconds
+    )
 
 # ---------- Main ----------
 if __name__ == "__main__":
