@@ -10,11 +10,27 @@ spec:
       containers:
         - name: restore
           image: alpine
+          env:
+            - name: TARGET_BACKUP
+              value: "latest" # Remplacez "latest" par le nom exact du fichier (ex: app-1772111701.db)
           command: ["/bin/sh","-c"]
           args:
             - |
-              LATEST=$(ls -t /backup/*.db | head -1)
-              cp $LATEST /data/app.db
+              if [ "$TARGET_BACKUP" = "latest" ]; then
+                FILE_TO_RESTORE=$(ls -t /backup/*.db | head -1)
+                echo "Aucun fichier spécifié, restauration du plus récent : $FILE_TO_RESTORE"
+              else
+                FILE_TO_RESTORE="/backup/$TARGET_BACKUP"
+                echo "Restauration du fichier spécifique : $FILE_TO_RESTORE"
+              fi
+              
+              if [ -f "$FILE_TO_RESTORE" ]; then
+                cp $FILE_TO_RESTORE /data/app.db
+                echo "Restauration terminée avec succès."
+              else
+                echo "Erreur : Le fichier $FILE_TO_RESTORE n'existe pas."
+                exit 1
+              fi
           volumeMounts:
             - name: data
               mountPath: /data
