@@ -12,7 +12,7 @@ spec:
           image: alpine
           env:
             - name: TARGET_BACKUP
-              value: "latest" # Remplacez "latest" par le nom exact du fichier (ex: app-1772111701.db)
+              value: "app-1772114401.db" # Remplacer "latest" par le nom exact du fichier (ex: app-1772111701.db) si vous voulez spécifier
           command: ["/bin/sh","-c"]
           args:
             - |
