@@ -282,7 +282,30 @@ Difficulté : Moyenne (~2 heures)
 ### **Atelier 2 : Choisir notre point de restauration**  
 Aujourd’hui nous restaurobs “le dernier backup”. Nous souhaitons **ajouter la capacité de choisir un point de restauration**.
 
-*..Décrir ici votre procédure de restauration (votre runbook)..*  
+### **Atelier 2 : Choisir notre point de restauration** Aujourd’hui nous restaurons “le dernier backup”. Nous souhaitons **ajouter la capacité de choisir un point de restauration**.
+
+**Runbook - Procédure de restauration ciblée :**
+
+1. **Identifier les points de restauration disponibles :**
+   Exécutez la commande suivante pour lister tous les backups présents dans le volume de sauvegarde :
+   `kubectl -n pra run debug-backup --rm -it --image=alpine --overrides='{"spec": {"containers": [{"name": "debug","image": "alpine","command": ["sh", "-c", "ls -lh /backup"],"stdin": true,"tty": true,"volumeMounts": [{"name": "backup","mountPath": "/backup"}]}],"volumes": [{"name": "backup","persistentVolumeClaim": {"claimName": "pra-backup"}}]}}'`
+   *Notez le nom exact du fichier que vous souhaitez restaurer (exemple : `app-1772111701.db`).*
+
+2. **Configurer le point de restauration :**
+   Ouvrez le fichier `pra/50-job-restore.yaml`.
+   Dans la section `env`, modifiez la valeur de la variable `TARGET_BACKUP` en remplaçant `"latest"` par le nom du fichier choisi.
+
+3. **Lancer la restauration :**
+   Supprimez d'abord l'ancien Job s'il est toujours présent dans le cluster :
+   `kubectl -n pra delete job sqlite-restore --ignore-not-found`
+   
+   Appliquez le nouveau Job de restauration :
+   `kubectl apply -f pra/50-job-restore.yaml`
+
+4. **Vérifier le succès de l'opération :**
+   Vous pouvez consulter les logs du Job pour confirmer que le bon fichier a été copié :
+   `kubectl -n pra logs job/sqlite-restore`
+   Vérifiez ensuite sur l'application (route `/consultation`) que les données correspondent bien au point de restauration choisi.
   
 ---------------------------------------------------
 Evaluation
