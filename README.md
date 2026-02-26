@@ -288,7 +288,31 @@ Aujourd’hui nous restaurobs “le dernier backup”. Nous souhaitons **ajouter
 
 1. **Identifier les points de restauration disponibles :**
    Exécutez la commande suivante pour lister tous les backups présents dans le volume de sauvegarde :
-   `kubectl -n pra run debug-backup --rm -it --image=alpine --overrides='{"spec": {"containers": [{"name": "debug","image": "alpine","command": ["sh", "-c", "ls -lh /backup"],"stdin": true,"tty": true,"volumeMounts": [{"name": "backup","mountPath": "/backup"}]}],"volumes": [{"name": "backup","persistentVolumeClaim": {"claimName": "pra-backup"}}]}}'`
+   `kubectl -n pra run debug-backup \
+  --rm -it \
+  --image=alpine \
+  --overrides='
+{
+  "spec": {
+    "containers": [{
+      "name": "debug",
+      "image": "alpine",
+      "command": ["sh"],
+      "stdin": true,
+      "tty": true,
+      "volumeMounts": [{
+        "name": "backup",
+        "mountPath": "/backup"
+      }]
+    }],
+    "volumes": [{
+      "name": "backup",
+      "persistentVolumeClaim": {
+        "claimName": "pra-backup"
+      }
+    }]
+  }
+}'`
    *Notez le nom exact du fichier que vous souhaitez restaurer (exemple : `app-1772111701.db`).*
 
 2. **Configurer le point de restauration :**
